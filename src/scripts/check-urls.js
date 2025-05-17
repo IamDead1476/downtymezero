@@ -4,7 +4,7 @@ import fetch from 'node-fetch';
 
 // Load environment variables (for GitHub Action or local testing)
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;// Use service key for update access
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;// Use service key for update access
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error('Missing Supabase env variables.');
