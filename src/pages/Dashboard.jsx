@@ -54,7 +54,7 @@ export default function Dashboard() {
     const { error } = await supabase.from('monitored_urls').insert({
       user_id: user.id,
       url: newUrl.trim(),
-      status: 'Unknown', // You can update this later via cron/function
+      status: 'Unknown',
     });
 
     setSubmitting(false);
@@ -63,13 +63,17 @@ export default function Dashboard() {
     if (error) {
       alert('Error adding URL: ' + error.message);
     } else {
-      fetchUrls(user.id); // refresh list
+      fetchUrls(user.id);
     }
   };
 
-  const getInitials = (email) => {
-    return email?.[0]?.toUpperCase() ?? '?';
-  };
+  const getInitials = (email) => email?.[0]?.toUpperCase() ?? '?';
+
+  const formatSize = (bytes) =>
+    bytes ? `${(bytes / 1024).toFixed(1)} KB` : 'N/A';
+
+  const formatDate = (ts) =>
+    ts ? new Date(ts).toLocaleString() : 'N/A';
 
   if (loading) {
     return <div className="p-8 text-center text-lg">Loading dashboard...</div>;
@@ -94,7 +98,7 @@ export default function Dashboard() {
         </button>
       </div>
 
-      <div className="p-6 max-w-3xl mx-auto">
+      <div className="p-6 max-w-5xl mx-auto">
         <h2 className="text-2xl font-semibold mb-4">Your Monitored URLs</h2>
 
         <form onSubmit={handleAddUrl} className="flex gap-2 mb-6">
@@ -118,26 +122,36 @@ export default function Dashboard() {
         {urls.length === 0 ? (
           <div className="text-gray-500">No URLs monitored yet.</div>
         ) : (
-          <table className="w-full text-left bg-white shadow rounded-md overflow-hidden">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="px-4 py-2 border-b">URL</th>
-                <th className="px-4 py-2 border-b">Status</th>
-                <th className="px-4 py-2 border-b">Created At</th>
-              </tr>
-            </thead>
-            <tbody>
-              {urls.map((url) => (
-                <tr key={url.id} className="border-t">
-                  <td className="px-4 py-2">{url.url}</td>
-                  <td className="px-4 py-2">{url.status || 'Unknown'}</td>
-                  <td className="px-4 py-2">
-                    {new Date(url.created_at).toLocaleString()}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left bg-white shadow rounded-md">
+              <thead className="bg-gray-100 text-sm">
+                <tr>
+                  <th className="px-4 py-2 border-b">URL</th>
+                  <th className="px-4 py-2 border-b">Status</th>
+                  <th className="px-4 py-2 border-b">HTTP Code</th>
+                  <th className="px-4 py-2 border-b">Load Time</th>
+                  <th className="px-4 py-2 border-b">Size</th>
+                  <th className="px-4 py-2 border-b">Last Checked</th>
+                  <th className="px-4 py-2 border-b">Last Down</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {urls.map((url) => (
+                  <tr key={url.id} className="border-t text-sm">
+                    <td className="px-4 py-2 text-blue-600 underline">{url.url}</td>
+                    <td className={`px-4 py-2 font-semibold ${url.status === 'Up' ? 'text-green-600' : 'text-red-600'}`}>
+                      {url.status || 'Unknown'}
+                    </td>
+                    <td className="px-4 py-2">{url.http_status || '—'}</td>
+                    <td className="px-4 py-2">{url.load_time_ms ? `${url.load_time_ms} ms` : '—'}</td>
+                    <td className="px-4 py-2">{formatSize(url.response_size_bytes)}</td>
+                    <td className="px-4 py-2">{formatDate(url.last_checked_at)}</td>
+                    <td className="px-4 py-2">{formatDate(url.last_down_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

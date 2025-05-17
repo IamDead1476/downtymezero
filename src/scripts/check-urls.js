@@ -2,16 +2,14 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import fetch from 'node-fetch';
 
-// Load environment variables (for GitHub Action or local testing)
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;// Use service key for update access
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-
-if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error('Missing Supabase env variables.');
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 async function checkUrls() {
   const { data: urls, error } = await supabase.from('monitored_urls').select('*');
@@ -22,26 +20,44 @@ async function checkUrls() {
   }
 
   for (const item of urls) {
+    const checkTime = new Date().toISOString();
+    let status = 'Down';
+    let httpStatus = null;
+    let loadTime = null;
+    let responseSize = null;
+
     try {
-      const response = await fetch(item.url, { method: 'GET', timeout: 8000 });
+      const start = Date.now();
+      const response = await fetch(item.url, { method: 'GET' });
+      const end = Date.now();
 
-      const status = response.ok ? 'Up' : 'Down';
+      loadTime = end - start;
+      httpStatus = response.status;
+      responseSize = parseInt(response.headers.get('content-length')) || null;
 
-      await supabase
-        .from('monitored_urls')
-        .update({ status })
-        .eq('id', item.id);
+      if (response.ok) {
+        status = 'Up';
+      }
 
-      console.log(`✅ ${item.url} is ${status}`);
     } catch (err) {
-      await supabase
-        .from('monitored_urls')
-        .update({ status: 'Down' })
-        .eq('id', item.id);
-
       console.log(`❌ ${item.url} is Down`);
-      console.log(`ERROR occured for URL: ${item.url}`, err);
+      console.log(`ERROR:`, err.message);
     }
+
+    // Update monitored_urls with new metrics
+    await supabase
+      .from('monitored_urls')
+      .update({
+        status,
+        http_status: httpStatus,
+        load_time_ms: loadTime,
+        response_size_bytes: responseSize,
+        last_checked_at: checkTime,
+        last_down_at: status === 'Down' ? checkTime : item.last_down_at,
+      })
+      .eq('id', item.id);
+
+    console.log(`🔎 ${item.url} → ${status}, ${httpStatus || 'n/a'}, ${loadTime || 'n/a'}ms`);
   }
 }
 
