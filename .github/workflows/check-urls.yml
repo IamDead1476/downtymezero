@@ -21,7 +21,7 @@ jobs:
         run: npm install node-fetch@2 @supabase/supabase-js
 
       - name: Run script
-        run: node scripts/check-urls.js
+        run: node src/scripts/check-urls.js
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
