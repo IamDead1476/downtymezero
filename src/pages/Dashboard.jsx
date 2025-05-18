@@ -11,6 +11,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    const err ;
     const fetchUserAndData = async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
       if (!user) {
