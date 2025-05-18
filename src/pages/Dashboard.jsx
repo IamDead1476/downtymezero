@@ -6,12 +6,12 @@ export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [urls, setUrls] = useState([]);
   const [newUrl, setNewUrl] = useState('');
+  const [expectedContent, setExpectedContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const err ;
     const fetchUserAndData = async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
       if (!user) {
@@ -55,11 +55,13 @@ export default function Dashboard() {
     const { error } = await supabase.from('monitored_urls').insert({
       user_id: user.id,
       url: newUrl.trim(),
+      expected_content: expectedContent.trim() || null,
       status: 'Unknown',
     });
 
     setSubmitting(false);
     setNewUrl('');
+    setExpectedContent('');
 
     if (error) {
       alert('Error adding URL: ' + error.message);
@@ -69,12 +71,8 @@ export default function Dashboard() {
   };
 
   const getInitials = (email) => email?.[0]?.toUpperCase() ?? '?';
-
-  const formatSize = (bytes) =>
-    bytes ? `${(bytes / 1024).toFixed(1)} KB` : 'N/A';
-
-  const formatDate = (ts) =>
-    ts ? new Date(ts).toLocaleString() : 'N/A';
+  const formatSize = (bytes) => (bytes ? `${(bytes / 1024).toFixed(1)} KB` : 'N/A');
+  const formatDate = (ts) => (ts ? new Date(ts).toLocaleString() : 'N/A');
 
   if (loading) {
     return <div className="p-8 text-center text-lg">Loading dashboard...</div>;
@@ -102,7 +100,7 @@ export default function Dashboard() {
       <div className="p-6 max-w-5xl mx-auto">
         <h2 className="text-2xl font-semibold mb-4">Your Monitored URLs</h2>
 
-        <form onSubmit={handleAddUrl} className="flex gap-2 mb-6">
+        <form onSubmit={handleAddUrl} className="flex flex-col md:flex-row md:items-center gap-2 mb-6">
           <input
             type="url"
             value={newUrl}
@@ -110,6 +108,13 @@ export default function Dashboard() {
             placeholder="https://example.com"
             className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
             required
+          />
+          <input
+            type="text"
+            value={expectedContent}
+            onChange={(e) => setExpectedContent(e.target.value)}
+            placeholder="Expected content (optional)"
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-400"
           />
           <button
             type="submit"
@@ -140,7 +145,13 @@ export default function Dashboard() {
                 {urls.map((url) => (
                   <tr key={url.id} className="border-t text-sm">
                     <td className="px-4 py-2 text-blue-600 underline">{url.url}</td>
-                    <td className={`px-4 py-2 font-semibold ${url.status === 'Up' ? 'text-green-600' : 'text-red-600'}`}>
+                    <td className={`px-4 py-2 font-semibold ${
+                      url.status === 'Up'
+                        ? 'text-green-600'
+                        : url.status === 'Invalid Content'
+                        ? 'text-yellow-500'
+                        : 'text-red-600'
+                    }`}>
                       {url.status || 'Unknown'}
                     </td>
                     <td className="px-4 py-2">{url.http_status || '—'}</td>
