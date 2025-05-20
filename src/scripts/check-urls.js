@@ -8,8 +8,15 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
 const EMAIL_FROM = process.env.EMAIL_FROM;
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SENDGRID_API_KEY || !EMAIL_FROM) {
-  throw new Error('Missing required environment variables.');
+const missingEnvVars = [];
+
+if (!SUPABASE_URL) missingEnvVars.push('SUPABASE_URL');
+if (!SUPABASE_SERVICE_ROLE_KEY) missingEnvVars.push('SUPABASE_SERVICE_ROLE_KEY');
+if (!SENDGRID_API_KEY) missingEnvVars.push('SENDGRID_API_KEY');
+if (!EMAIL_FROM) missingEnvVars.push('EMAIL_FROM');
+
+if (missingEnvVars.length > 0) {
+  throw new Error(`Missing required environment variable(s): ${missingEnvVars.join(', ')}`);
 }
 
 sgMail.setApiKey(SENDGRID_API_KEY);
