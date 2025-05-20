@@ -12,8 +12,8 @@ const missingEnvVars = [];
 
 if (!SUPABASE_URL) missingEnvVars.push('SUPABASE_URL');
 if (!SUPABASE_SERVICE_ROLE_KEY) missingEnvVars.push('SUPABASE_SERVICE_ROLE_KEY');
-// if (!SENDGRID_API_KEY) missingEnvVars.push('SENDGRID_API_KEY');
-// if (!EMAIL_FROM) missingEnvVars.push('EMAIL_FROM');
+if (!SENDGRID_API_KEY) missingEnvVars.push('SENDGRID_API_KEY');
+if (!EMAIL_FROM) missingEnvVars.push('EMAIL_FROM');
 
 if (missingEnvVars.length > 0) {
   throw new Error(`Missing required environment variable(s): ${missingEnvVars.join(', ')}`);
@@ -22,28 +22,28 @@ if (missingEnvVars.length > 0) {
 sgMail.setApiKey(SENDGRID_API_KEY);
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-// async function sendAlertEmail(to, siteName, url, status, httpStatus, loadTime) {
-//   const msg = {
-//     to,
-//     from: EMAIL_FROM,
-//     subject: `⚠️ Alert: "${siteName}" is ${status}`,
-//     html: `
-//       <p><strong>${siteName}</strong> (<a href="${url}">${url}</a>) is <strong>${status}</strong>.</p>
-//       <ul>
-//         <li><strong>HTTP Status:</strong> ${httpStatus}</li>
-//         <li><strong>Load Time:</strong> ${loadTime || 'N/A'} ms</li>
-//         <li><strong>Checked At:</strong> ${new Date().toLocaleString()}</li>
-//       </ul>
-//     `,
-//   };
+async function sendAlertEmail(to, siteName, url, status, httpStatus, loadTime) {
+  const msg = {
+    to,
+    from: EMAIL_FROM,
+    subject: `⚠️ Alert: "${siteName}" is ${status}`,
+    html: `
+      <p><strong>${siteName}</strong> (<a href="${url}">${url}</a>) is <strong>${status}</strong>.</p>
+      <ul>
+        <li><strong>HTTP Status:</strong> ${httpStatus}</li>
+        <li><strong>Load Time:</strong> ${loadTime || 'N/A'} ms</li>
+        <li><strong>Checked At:</strong> ${new Date().toLocaleString()}</li>
+      </ul>
+    `,
+  };
 
-//   try {
-//     await sgMail.send(msg);
-//     console.log(`📧 Email sent to ${to}`);
-//   } catch (error) {
-//     console.error('Failed to send email:', error.response?.body || error.message);
-//   }
-// }
+  try {
+    await sgMail.send(msg);
+    console.log(`📧 Email sent to ${to}`);
+  } catch (error) {
+    console.error('Failed to send email:', error.response?.body || error.message);
+  }
+}
 
 async function checkUrls() {
   const { data: urls, error } = await supabase.from('monitored_urls').select(`
@@ -102,17 +102,17 @@ async function checkUrls() {
 
     console.log(`🔎 ${item.url} → ${status}, ${httpStatus || 'n/a'}, ${loadTime || 'n/a'}ms`);
 
-    // Send alert if status changed to Down or Invalid Content
-    // if (wasDown && item.user?.email) {
-    //   await sendAlertEmail(
-    //     item.user.email,
-    //     item.name || item.url,
-    //     item.url,
-    //     status,
-    //     httpStatus,
-    //     loadTime
-    //   );
-    // }
+    //Send alert if status changed to Down or Invalid Content
+    if (wasDown && item.user?.email) {
+      await sendAlertEmail(
+        item.user.email,
+        item.name || item.url,
+        item.url,
+        status,
+        httpStatus,
+        loadTime
+      );
+    }
   }
 }
 
