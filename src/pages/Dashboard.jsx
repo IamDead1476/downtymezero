@@ -57,6 +57,7 @@ export default function Dashboard() {
       url: newUrl.trim(),
       expected_content: expectedContent.trim() || null,
       status: 'Unknown',
+      email_alerts_enabled: true, // default to enabled
     });
 
     setSubmitting(false);
@@ -65,6 +66,19 @@ export default function Dashboard() {
 
     if (error) {
       alert('Error adding URL: ' + error.message);
+    } else {
+      fetchUrls(user.id);
+    }
+  };
+
+  const toggleAlert = async (urlId, enabled) => {
+    const { error } = await supabase
+      .from('monitored_urls')
+      .update({ email_alerts_enabled: enabled })
+      .eq('id', urlId);
+
+    if (error) {
+      alert('Failed to update alert setting: ' + error.message);
     } else {
       fetchUrls(user.id);
     }
@@ -97,7 +111,7 @@ export default function Dashboard() {
         </button>
       </div>
 
-      <div className="p-6 max-w-5xl mx-auto">
+      <div className="p-6 max-w-6xl mx-auto">
         <h2 className="text-2xl font-semibold mb-4">Your Monitored URLs</h2>
 
         <form onSubmit={handleAddUrl} className="flex flex-col md:flex-row md:items-center gap-2 mb-6">
@@ -139,6 +153,8 @@ export default function Dashboard() {
                   <th className="px-4 py-2 border-b">Size</th>
                   <th className="px-4 py-2 border-b">Last Checked</th>
                   <th className="px-4 py-2 border-b">Last Down</th>
+                  <th className="px-4 py-2 border-b">Last Alert Sent</th>
+                  <th className="px-4 py-2 border-b">Alerts Enabled</th>
                 </tr>
               </thead>
               <tbody>
@@ -159,6 +175,14 @@ export default function Dashboard() {
                     <td className="px-4 py-2">{formatSize(url.response_size_bytes)}</td>
                     <td className="px-4 py-2">{formatDate(url.last_checked_at)}</td>
                     <td className="px-4 py-2">{formatDate(url.last_down_at)}</td>
+                    <td className="px-4 py-2">{formatDate(url.alert_sent_at)}</td>
+                    <td className="px-4 py-2">
+                      <input
+                        type="checkbox"
+                        checked={url.email_alerts_enabled}
+                        onChange={() => toggleAlert(url.id, !url.email_alerts_enabled)}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
