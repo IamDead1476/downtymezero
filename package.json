@@ -13,6 +13,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@sendgrid/mail": "^8.1.5",
     "@supabase/supabase-js": "^2.49.4",
     "@tailwindcss/vite": "^4.1.7",
     "dotenv": "^16.5.0",
