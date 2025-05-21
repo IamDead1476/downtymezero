@@ -1,4 +1,4 @@
-export function generateEmailTemplate({ siteName, url, status, httpStatus, loadTime, timestamp }) {
+export function renderEmailTemplate({ siteName, url, status, httpStatus, loadTime, timestamp }) {
   return `
   <!DOCTYPE html>
   <html lang="en">
