@@ -1,31 +1,30 @@
 import "dotenv/config";
-
 import { createClient } from "@supabase/supabase-js";
 import fetch from "node-fetch";
 import sgMail from "@sendgrid/mail";
 
+// Load environment variables
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
 const EMAIL_FROM = process.env.EMAIL_FROM;
 
+// Validate env vars
 const missingEnvVars = [];
-
 if (!SUPABASE_URL) missingEnvVars.push("SUPABASE_URL");
-if (!SUPABASE_SERVICE_ROLE_KEY)
-  missingEnvVars.push("SUPABASE_SERVICE_ROLE_KEY");
+if (!SUPABASE_SERVICE_ROLE_KEY) missingEnvVars.push("SUPABASE_SERVICE_ROLE_KEY");
 if (!SENDGRID_API_KEY) missingEnvVars.push("SENDGRID_API_KEY");
 if (!EMAIL_FROM) missingEnvVars.push("EMAIL_FROM");
 
 if (missingEnvVars.length > 0) {
-  throw new Error(
-    `Missing required environment variable(s): ${missingEnvVars.join(", ")}`
-  );
+  throw new Error(`Missing required env variables: ${missingEnvVars.join(", ")}`);
 }
 
+// Init services
 sgMail.setApiKey(SENDGRID_API_KEY);
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+// Send email using SendGrid
 async function sendAlertEmail(to, siteName, url, status, httpStatus, loadTime) {
   const msg = {
     to,
@@ -45,20 +44,16 @@ async function sendAlertEmail(to, siteName, url, status, httpStatus, loadTime) {
     await sgMail.send(msg);
     console.log(`📧 Email sent to ${to}`);
   } catch (error) {
-    console.error(
-      "Failed to send email:",
-      error.response?.body || error.message
-    );
+    console.error("❌ Failed to send email:", error.response?.body || error.message);
   }
 }
 
+// Main function to check all monitored URLs
 async function checkUrls() {
-  const { data: urls, error } = await supabase
-    .from("monitored_urls")
-    .select("*");
+  const { data: urls, error } = await supabase.from("monitored_urls").select("*");
 
   if (error) {
-    console.error("Error fetching URLs:", error.message);
+    console.error("❌ Error fetching URLs:", error.message);
     return;
   }
 
@@ -76,11 +71,11 @@ async function checkUrls() {
 
       loadTime = end - start;
       httpStatus = response.status;
-      responseSize = parseInt(response.headers.get("content-length")) || null;
+      const contentLength = response.headers.get("content-length");
+      responseSize = contentLength ? parseInt(contentLength) : null;
 
       if (response.ok) {
-        let body = await response.text();
-
+        const body = await response.text();
         if (item.expected_content && !body.includes(item.expected_content)) {
           status = "Invalid Content";
         } else {
@@ -95,6 +90,12 @@ async function checkUrls() {
       item.status !== status &&
       (status === "Down" || status === "Invalid Content");
 
+    const alreadyAlertedRecently =
+      item.alert_sent_at &&
+      item.last_down_at &&
+      new Date(item.alert_sent_at).getTime() >= new Date(item.last_down_at).getTime();
+
+    // Update URL record
     await supabase
       .from("monitored_urls")
       .update({
@@ -108,38 +109,41 @@ async function checkUrls() {
       .eq("id", item.id);
 
     console.log(
-      `🔎 ${item.url} → ${status}, ${httpStatus || "n/a"}, ${
-        loadTime || "n/a"
-      }ms`
+      `🔎 ${item.url} → ${status}, HTTP: ${httpStatus || "n/a"}, Load: ${loadTime || "n/a"}ms`
     );
 
-    // Fetch the user's email from auth.users
-    if (wasDown && item.user_id) {
-      const { data: userData, error: userError } =
-        await supabase.auth.admin.getUserById(item.user_id);
+    // Send alert if newly down and alerting is enabled
+    if (
+      wasDown &&
+      !alreadyAlertedRecently &&
+      item.user_id &&
+      item.email_alerts_enabled
+    ) {
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(item.user_id);
 
-      if (userError) {
-        console.error(
-          `Failed to fetch user email for user_id: ${item.user_id}`,
-          userError.message
-        );
+      if (userError || !userData?.user?.email) {
+        console.error(`❌ Could not get user email for ${item.user_id}`);
         continue;
       }
 
-      const userEmail = userData?.user?.email;
+      const userEmail = userData.user.email;
 
-      if (userEmail) {
-        await sendAlertEmail(
-          userEmail,
-          item.name || item.url,
-          item.url,
-          status,
-          httpStatus,
-          loadTime
-        );
-      }
+      await sendAlertEmail(
+        userEmail,
+        item.name || item.url,
+        item.url,
+        status,
+        httpStatus,
+        loadTime
+      );
+
+      await supabase
+        .from("monitored_urls")
+        .update({ alert_sent_at: new Date().toISOString() })
+        .eq("id", item.id);
     }
   }
 }
 
+// Run the job
 checkUrls();
