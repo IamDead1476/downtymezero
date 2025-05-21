@@ -46,10 +46,7 @@ async function sendAlertEmail(to, siteName, url, status, httpStatus, loadTime) {
 }
 
 async function checkUrls() {
-  const { data: urls, error } = await supabase.from('monitored_urls').select(`
-    *,
-    user:users ( email ) -- assuming you have a FK relationship
-  `);
+  const { data: urls, error } = await supabase.from('monitored_urls').select('*');
 
   if (error) {
     console.error('Error fetching URLs:', error.message);
@@ -81,7 +78,6 @@ async function checkUrls() {
           status = 'Up';
         }
       }
-
     } catch (err) {
       console.log(`❌ ${item.url} is Down`);
     }
@@ -102,16 +98,31 @@ async function checkUrls() {
 
     console.log(`🔎 ${item.url} → ${status}, ${httpStatus || 'n/a'}, ${loadTime || 'n/a'}ms`);
 
-    //Send alert if status changed to Down or Invalid Content
-    if (wasDown && item.user?.email) {
-      await sendAlertEmail(
-        item.user.email,
-        item.name || item.url,
-        item.url,
-        status,
-        httpStatus,
-        loadTime
-      );
+    // Fetch the user's email from auth.users
+    if (wasDown && item.user_id) {
+      const { data: userData, error: userError } = await supabase
+        .from('auth.users')
+        .select('email')
+        .eq('id', item.user_id)
+        .single();
+
+      if (userError) {
+        console.error(`Failed to fetch user email for user_id: ${item.user_id}`, userError.message);
+        continue;
+      }
+
+      const userEmail = userData?.email;
+
+      if (userEmail) {
+        await sendAlertEmail(
+          userEmail,
+          item.name || item.url,
+          item.url,
+          status,
+          httpStatus,
+          loadTime
+        );
+      }
     }
   }
 }
