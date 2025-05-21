@@ -1,5 +1,7 @@
+import juice from 'juice';
+
 export function renderEmailTemplate({ siteName, url, status, httpStatus, loadTime, timestamp }) {
-  return `
+  const html = `
   <!DOCTYPE html>
   <html lang="en">
   <head>
@@ -8,7 +10,88 @@ export function renderEmailTemplate({ siteName, url, status, httpStatus, loadTim
       <title>Website Down Alert</title>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
       <style>
-          /* (Keep the same styles you provided — trimmed here for brevity) */
+          body {
+              font-family: 'Inter', sans-serif;
+              background-color: #EF4444;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              margin: 0;
+              padding: 1rem;
+              box-sizing: border-box;
+          }
+          .email-card {
+              background-color: white;
+              border-radius: 0.5rem;
+              box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+                          0 10px 10px -5px rgba(0, 0, 0, 0.04);
+              padding: 1.5rem;
+              max-width: 28rem;
+              width: 100%;
+              margin: auto;
+              border-top: 8px solid #DC2626;
+          }
+          .header-section {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              margin-bottom: 1.5rem;
+          }
+          .main-heading {
+              font-size: 1.5rem;
+              font-weight: 700;
+              color: #1F2937;
+          }
+          .alert-icon {
+              height: 2rem;
+              width: 2rem;
+              color: #DC2626;
+          }
+          .subject-line {
+              font-size: 1.25rem;
+              font-weight: 600;
+              color: #B91C1C;
+              margin-bottom: 1rem;
+          }
+          .email-body-text {
+              color: #374151;
+              margin-bottom: 1rem;
+              line-height: 1.625;
+          }
+          .email-body-text.last-paragraph {
+              margin-bottom: 1.5rem;
+          }
+          .highlight-text {
+              font-weight: 600;
+              color: #2563EB;
+              text-decoration: none;
+          }
+          .info-box {
+              background-color: #FEF2F2;
+              padding: 1rem;
+              border-radius: 0.375rem;
+              font-size: 0.875rem;
+              color: #991B1B;
+              border: 1px solid #FECACA;
+          }
+          .info-box-title {
+              font-weight: 500;
+              margin-bottom: 0.5rem;
+          }
+          .info-box-list {
+              list-style-type: disc;
+              list-style-position: inside;
+          }
+          .info-box-list li + li {
+              margin-top: 0.25rem;
+          }
+          .footer-text {
+              color: #6B7280;
+              font-size: 0.75rem;
+              margin-top: 1.5rem;
+              text-align: center;
+          }
       </style>
   </head>
   <body>
@@ -22,9 +105,7 @@ export function renderEmailTemplate({ siteName, url, status, httpStatus, loadTim
 
           <h2 class="subject-line">Urgent: Website Downtime Detected!</h2>
 
-          <p class="email-body-text">
-              Dear Team,
-          </p>
+          <p class="email-body-text">Dear Team,</p>
           <p class="email-body-text">
               We are writing to inform you that our website, <span class="highlight-text">${siteName}</span>, is currently experiencing an outage.
           </p>
@@ -54,4 +135,6 @@ export function renderEmailTemplate({ siteName, url, status, httpStatus, loadTim
   </body>
   </html>
   `;
+
+  return juice(html); // Inline styles here
 }
