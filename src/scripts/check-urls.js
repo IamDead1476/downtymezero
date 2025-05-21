@@ -2,7 +2,7 @@ import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
 import fetch from "node-fetch";
 import sgMail from "@sendgrid/mail";
-import { renderEmailTemplate } from "../components/EmailTemplate";
+import { renderEmailTemplate } from "../components/EmailTemplate.jsx";
 
 // Load environment variables
 const SUPABASE_URL = process.env.SUPABASE_URL;
