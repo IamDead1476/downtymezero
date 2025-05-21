@@ -2,6 +2,7 @@ import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
 import fetch from "node-fetch";
 import sgMail from "@sendgrid/mail";
+import { renderEmailTemplate } from "src/components/EmailTemplate.js";
 
 // Load environment variables
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -9,7 +10,6 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
 const EMAIL_FROM = process.env.EMAIL_FROM;
 
-// Validate env vars
 const missingEnvVars = [];
 if (!SUPABASE_URL) missingEnvVars.push("SUPABASE_URL");
 if (!SUPABASE_SERVICE_ROLE_KEY) missingEnvVars.push("SUPABASE_SERVICE_ROLE_KEY");
@@ -25,19 +25,21 @@ sgMail.setApiKey(SENDGRID_API_KEY);
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 // Send email using SendGrid
-async function sendAlertEmail(to, siteName, url, status, httpStatus, loadTime) {
+async function sendAlertEmail(to, siteName, url, status, httpStatus, loadTime, timestamp) {
+  const html = renderEmailTemplate({
+    siteName,
+    url,
+    status,
+    httpStatus,
+    loadTime,
+    timestamp,
+  });
+
   const msg = {
     to,
     from: EMAIL_FROM,
     subject: `⚠️ Alert: "${siteName}" is ${status}`,
-    html: `
-      <p><strong>${siteName}</strong> (<a href="${url}">${url}</a>) is <strong>${status}</strong>.</p>
-      <ul>
-        <li><strong>HTTP Status:</strong> ${httpStatus}</li>
-        <li><strong>Load Time:</strong> ${loadTime || "N/A"} ms</li>
-        <li><strong>Checked At:</strong> ${new Date().toLocaleString()}</li>
-      </ul>
-    `,
+    html,
   };
 
   try {
@@ -82,7 +84,7 @@ async function checkUrls() {
           status = "Up";
         }
       }
-    } catch (err) {
+    } catch {
       console.log(`❌ ${item.url} is Down`);
     }
 
@@ -112,7 +114,6 @@ async function checkUrls() {
       `🔎 ${item.url} → ${status}, HTTP: ${httpStatus || "n/a"}, Load: ${loadTime || "n/a"}ms`
     );
 
-    // Send alert if newly down and alerting is enabled
     if (
       wasDown &&
       !alreadyAlertedRecently &&
@@ -134,7 +135,8 @@ async function checkUrls() {
         item.url,
         status,
         httpStatus,
-        loadTime
+        loadTime,
+        new Date().toLocaleString()
       );
 
       await supabase
