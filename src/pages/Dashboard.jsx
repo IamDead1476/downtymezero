@@ -1,21 +1,24 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import supabase from '../supabaseClient';
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import supabase from "../supabaseClient";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [urls, setUrls] = useState([]);
-  const [newUrl, setNewUrl] = useState('');
-  const [expectedContent, setExpectedContent] = useState('');
+  const [newUrl, setNewUrl] = useState("");
+  const [expectedContent, setExpectedContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUserAndData = async () => {
-      const { data: { user }, error } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
       if (!user) {
-        navigate('/');
+        navigate("/");
         return;
       }
 
@@ -29,10 +32,10 @@ export default function Dashboard() {
 
   const fetchUrls = async (userId) => {
     const { data, error } = await supabase
-      .from('monitored_urls')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .from("monitored_urls")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
 
     if (error) {
       console.error(error.message);
@@ -43,7 +46,7 @@ export default function Dashboard() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate('/');
+    navigate("/");
   };
 
   const handleAddUrl = async (e) => {
@@ -52,20 +55,20 @@ export default function Dashboard() {
 
     setSubmitting(true);
 
-    const { error } = await supabase.from('monitored_urls').insert({
+    const { error } = await supabase.from("monitored_urls").insert({
       user_id: user.id,
       url: newUrl.trim(),
       expected_content: expectedContent.trim() || null,
-      status: 'Unknown',
+      status: "Unknown",
       email_alerts_enabled: true, // default to enabled
     });
 
     setSubmitting(false);
-    setNewUrl('');
-    setExpectedContent('');
+    setNewUrl("");
+    setExpectedContent("");
 
     if (error) {
-      alert('Error adding URL: ' + error.message);
+      alert("Error adding URL: " + error.message);
     } else {
       fetchUrls(user.id);
     }
@@ -73,20 +76,21 @@ export default function Dashboard() {
 
   const toggleAlert = async (urlId, enabled) => {
     const { error } = await supabase
-      .from('monitored_urls')
+      .from("monitored_urls")
       .update({ email_alerts_enabled: enabled })
-      .eq('id', urlId);
+      .eq("id", urlId);
 
     if (error) {
-      alert('Failed to update alert setting: ' + error.message);
+      alert("Failed to update alert setting: " + error.message);
     } else {
       fetchUrls(user.id);
     }
   };
 
-  const getInitials = (email) => email?.[0]?.toUpperCase() ?? '?';
-  const formatSize = (bytes) => (bytes ? `${(bytes / 1024).toFixed(1)} KB` : 'N/A');
-  const formatDate = (ts) => (ts ? new Date(ts).toLocaleString() : 'N/A');
+  const getInitials = (email) => email?.[0]?.toUpperCase() ?? "?";
+  const formatSize = (bytes) =>
+    bytes ? `${(bytes / 1024).toFixed(1)} KB` : "N/A";
+  const formatDate = (ts) => (ts ? new Date(ts).toLocaleString() : "N/A");
 
   if (loading) {
     return <div className="p-8 text-center text-lg">Loading dashboard...</div>;
@@ -100,7 +104,9 @@ export default function Dashboard() {
             {getInitials(user.email)}
           </div>
           <div>
-            <div className="text-sm font-medium text-gray-700">{user.email}</div>
+            <div className="text-sm font-medium text-gray-700">
+              {user.email}
+            </div>
           </div>
         </div>
         <button
@@ -114,7 +120,10 @@ export default function Dashboard() {
       <div className="p-6 max-w-6xl mx-auto">
         <h2 className="text-2xl font-semibold mb-4">Your Monitored URLs</h2>
 
-        <form onSubmit={handleAddUrl} className="flex flex-col md:flex-row md:items-center gap-2 mb-6">
+        <form
+          onSubmit={handleAddUrl}
+          className="flex flex-col md:flex-row md:items-center gap-2 mb-6"
+        >
           <input
             type="url"
             value={newUrl}
@@ -135,7 +144,7 @@ export default function Dashboard() {
             disabled={submitting}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md"
           >
-            {submitting ? 'Adding...' : 'Add URL'}
+            {submitting ? "Adding..." : "Add URL"}
           </button>
         </form>
 
@@ -155,33 +164,58 @@ export default function Dashboard() {
                   <th className="px-4 py-2 border-b">Last Down</th>
                   <th className="px-4 py-2 border-b">Last Alert Sent</th>
                   <th className="px-4 py-2 border-b">Alerts Enabled</th>
+                  <th className="px-4 py-2 border-b">Metrics</th>
                 </tr>
               </thead>
               <tbody>
                 {urls.map((url) => (
                   <tr key={url.id} className="border-t text-sm">
-                    <td className="px-4 py-2 text-blue-600 underline">{url.url}</td>
-                    <td className={`px-4 py-2 font-semibold ${
-                      url.status === 'Up'
-                        ? 'text-green-600'
-                        : url.status === 'Invalid Content'
-                        ? 'text-yellow-500'
-                        : 'text-red-600'
-                    }`}>
-                      {url.status || 'Unknown'}
+                    <td className="px-4 py-2 text-blue-600 underline">
+                      {url.url}
                     </td>
-                    <td className="px-4 py-2">{url.http_status || '—'}</td>
-                    <td className="px-4 py-2">{url.load_time_ms ? `${url.load_time_ms} ms` : '—'}</td>
-                    <td className="px-4 py-2">{formatSize(url.response_size_bytes)}</td>
-                    <td className="px-4 py-2">{formatDate(url.last_checked_at)}</td>
-                    <td className="px-4 py-2">{formatDate(url.last_down_at)}</td>
-                    <td className="px-4 py-2">{formatDate(url.alert_sent_at)}</td>
+                    <td
+                      className={`px-4 py-2 font-semibold ${
+                        url.status === "Up"
+                          ? "text-green-600"
+                          : url.status === "Invalid Content"
+                          ? "text-yellow-500"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {url.status || "Unknown"}
+                    </td>
+                    <td className="px-4 py-2">{url.http_status || "—"}</td>
+                    <td className="px-4 py-2">
+                      {url.load_time_ms ? `${url.load_time_ms} ms` : "—"}
+                    </td>
+                    <td className="px-4 py-2">
+                      {formatSize(url.response_size_bytes)}
+                    </td>
+                    <td className="px-4 py-2">
+                      {formatDate(url.last_checked_at)}
+                    </td>
+                    <td className="px-4 py-2">
+                      {formatDate(url.last_down_at)}
+                    </td>
+                    <td className="px-4 py-2">
+                      {formatDate(url.alert_sent_at)}
+                    </td>
                     <td className="px-4 py-2">
                       <input
                         type="checkbox"
                         checked={url.email_alerts_enabled}
-                        onChange={() => toggleAlert(url.id, !url.email_alerts_enabled)}
+                        onChange={() =>
+                          toggleAlert(url.id, !url.email_alerts_enabled)
+                        }
                       />
+                    </td>
+                    <td className="px-4 py-2">
+                      <button
+                        onClick={() => navigate(`/metrics/${url.id}`)}
+                        className="text-indigo-600 hover:underline text-sm"
+                      >
+                        View Metrics
+                      </button>
                     </td>
                   </tr>
                 ))}

@@ -65,6 +65,7 @@ async function checkUrls() {
     let httpStatus = null;
     let loadTime = null;
     let responseSize = null;
+    let errorMessage = null;
 
     try {
       const start = Date.now();
@@ -84,7 +85,8 @@ async function checkUrls() {
           status = "Up";
         }
       }
-    } catch {
+    } catch (err) {
+      errorMessage = err.message;
       console.log(`❌ ${item.url} is Down`);
     }
 
@@ -97,7 +99,7 @@ async function checkUrls() {
       item.last_down_at &&
       new Date(item.alert_sent_at).getTime() >= new Date(item.last_down_at).getTime();
 
-    // Update URL record
+    // Update monitored_urls table
     await supabase
       .from("monitored_urls")
       .update({
@@ -109,6 +111,19 @@ async function checkUrls() {
         last_down_at: status === "Down" ? checkTime : item.last_down_at,
       })
       .eq("id", item.id);
+
+    // Insert historical metrics into url_metrics table
+    await supabase.from("url_metrics").insert([
+      {
+        url_id: item.id,
+        status,
+        http_status: httpStatus,
+        load_time_ms: loadTime,
+        response_size_bytes: responseSize,
+        error_message: errorMessage,
+        checked_at: checkTime,
+      },
+    ]);
 
     console.log(
       `🔎 ${item.url} → ${status}, HTTP: ${httpStatus || "n/a"}, Load: ${loadTime || "n/a"}ms`
