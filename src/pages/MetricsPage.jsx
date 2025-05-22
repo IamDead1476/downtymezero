@@ -127,21 +127,34 @@ export default function MetricsPage() {
         />
       </div>
 
-      <div className="bg-white p-4 rounded shadow mb-6">
+    <div className="bg-white p-4 rounded shadow mb-6">
         <h2 className="text-lg font-semibold mb-2">HTTP Status Codes</h2>
         <Bar
-          data={{
-            labels: metrics.map((m) => formatDate(m.timestamp)),
+            data={{
+            labels: metrics.map((m) => formatDate(m.checked_at)),
             datasets: [
-              {
+                {
                 label: "HTTP Status",
                 data: metrics.map((m) => m.http_status),
-                backgroundColor: "rgba(255, 99, 132, 0.6)",
-              },
+                backgroundColor: metrics.map((m) =>
+                    m.http_status === 200 ? "rgba(75, 192, 192, 0.6)" : "rgba(255, 99, 132, 0.6)"
+                ),
+                },
             ],
-          }}
+            }}
+            options={{
+            scales: {
+                y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: "HTTP Status Code",
+                },
+                },
+            },
+            }}
         />
-      </div>
+    </div>
 
       <div className="bg-white p-4 rounded shadow mb-6">
         <h2 className="text-lg font-semibold mb-2">Uptime Status Timeline</h2>
